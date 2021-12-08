@@ -492,6 +492,7 @@ public class FileHandler extends StreamHandler {
             }
             // Generate a lock file name from the "unique" int.
             lockFileName = generate(pattern, 0, unique).toString() + ".lck";
+            System.out.println("FH trying file " + lockFileName);
             // Now try to lock that filename.
             // Because some systems (e.g., Solaris) can only do file locks
             // between processes (and not within a process), we first check
@@ -529,6 +530,7 @@ public class FileHandler extends StreamHandler {
                             throw ade; // no need to retry
                         }
                     } catch (FileAlreadyExistsException ix) {
+                        System.out.println("FH found zombie lock " + lockFilePath);
                         // This may be a zombie file left over by a previous
                         // execution. Reuse it - but only if we can actually
                         // write to its directory.
@@ -539,17 +541,21 @@ public class FileHandler extends StreamHandler {
                             try {
                                 channel = FileChannel.open(lockFilePath,
                                     WRITE, APPEND);
+                                System.out.println("FH successfully created filechannel " + lockFilePath);
                             } catch (NoSuchFileException x) {
                                 // Race condition - retry once, and if that
                                 // fails again just try the next name in
                                 // the sequence.
                                 continue;
                             } catch(IOException x) {
+                                System.out.println("FH " + lockFilePath + " is ran into ioexception");
+                                x.printStackTrace();
                                 // the file may not be writable for us.
                                 // try the next name in the sequence
                                 break;
                             }
                         } else {
+                            System.out.println("FH " + lockFilePath + " is not writeable");
                             // at this point channel should still be null.
                             // break and try the next name in the sequence.
                             break;
@@ -562,7 +568,9 @@ public class FileHandler extends StreamHandler {
 
                 boolean available;
                 try {
+                    System.out.println("FH trying lock for " + lockFileName);
                     available = lockFileChannel.tryLock() != null;
+                    System.out.println("FH tried lock success? " + available);
                     // We got the lock OK.
                     // At this point we could call File.deleteOnExit().
                     // However, this could have undesirable side effects
@@ -577,11 +585,15 @@ public class FileHandler extends StreamHandler {
                     // getting a lock.   Drop through, but only if we did
                     // create the file...
                     available = fileCreated;
+                    System.out.println("FH trylock ioexception, file created? " + available);
+                    ix.printStackTrace();
                 } catch (OverlappingFileLockException x) {
                     // someone already locked this file in this VM, through
                     // some other channel - that is - using something else
                     // than new FileHandler(...);
                     // continue searching for an available lock.
+                    System.out.println("FH trylock OverlappingFileLockException");
+                    x.printStackTrace();
                     available = false;
                 }
                 if (available) {

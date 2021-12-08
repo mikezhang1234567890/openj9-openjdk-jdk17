@@ -98,6 +98,7 @@ class FileLockTable {
 
             // The key isn't in the map so we try to create it atomically
             if (list == null) {
+                System.out.println("FLT add no list created yet");
                 list = new ArrayList<FileLockReference>(2);
                 List<FileLockReference> prev;
                 synchronized (list) {
@@ -119,6 +120,7 @@ class FileLockTable {
             // and add the new lock to the list.
             synchronized (list) {
                 List<FileLockReference> current = lockMap.get(fileKey);
+                System.out.println("FLT add list found, is current? " + (list == current));
                 if (list == current) {
                     checkList(list, fl.position(), fl.size());
                     list.add(new FileLockReference(fl, queue, fileKey));
@@ -223,10 +225,18 @@ class FileLockTable {
         throws OverlappingFileLockException
     {
         assert Thread.holdsLock(list);
+        System.out.println("FLT check lock pos " + position + " size " + size + " against list size " + list.size());
         for (FileLockReference ref: list) {
             FileLock fl = ref.get();
-            if (fl != null && fl.overlaps(position, size))
+            if (fl !=null) {
+                System.out.println("FLT check lock against lock pos " + fl.position() + " size " + fl.size());
+            } else {
+                System.out.println("FLT check lock against null lock");
+            }
+            if (fl != null && fl.overlaps(position, size)) {
+                System.out.println("FLT check lock overlaps lock pos " + fl.position() + " size " + fl.size());
                 throw new OverlappingFileLockException();
+            }
         }
     }
 
